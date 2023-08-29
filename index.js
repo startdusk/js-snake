@@ -23,17 +23,23 @@ function initalizeCanvas() {
   }
 }
 
-function drawSnake(snake) {
-  const snakePositions = new Set();
+function toPositionSet(snake) {
+  const set = new Set();
   for (let [top, left] of snake) {
-    const position = top + "_" + left;
-    snakePositions.add(position);
+    const position = makePosition(top, left);
+    set.add(position);
   }
+  return set;
+}
+
+function drawSnake() {
   for (let i = 0; i < ROWS; i++) {
     for (let j = 0; j < COLS; j++) {
       const position = i + "_" + j;
       const pixel = pixels.get(position);
-      pixel.style.background = snakePositions.has(position) ? "black" : "white";
+      pixel.style.background = currentSnakePositions.has(position)
+        ? "black"
+        : "white";
     }
   }
 }
@@ -45,7 +51,12 @@ let currentSnake = [
   [0, 2],
   [0, 3],
   [0, 4],
+  [0, 5],
+  [0, 6],
+  [0, 7],
+  [0, 8],
 ];
+let currentSnakePositions = toPositionSet(currentSnake);
 
 const moveRight = ([top, left]) => [top, left + 1];
 const moveLeft = ([top, left]) => [top, left - 1];
@@ -98,8 +109,13 @@ function step() {
   }
   currentDirection = nextDirection;
   const nextHead = currentDirection(head);
+  if (!checkValidHead(currentSnakePositions, nextHead)) {
+    stopGame();
+    return;
+  }
   currentSnake.push(nextHead);
-  drawSnake(currentSnake);
+  currentSnakePositions = toPositionSet(currentSnake);
+  drawSnake();
   // dump(directionQueue);
 }
 
@@ -125,7 +141,31 @@ function areOpposite(dir1, dir2) {
 //     .join(", ");
 // }
 
-drawSnake(currentSnake);
-setInterval(() => {
+function checkValidHead(positions, [top, left]) {
+  if (top < 0 || left < 0) {
+    return false;
+  }
+  if (top >= ROWS || left >= COLS) {
+    return false;
+  }
+  const position = makePosition(top, left);
+  if (positions.has(position)) {
+    return false;
+  }
+  return true;
+}
+
+function stopGame() {
+  canvas.style.borderColor = "red";
+  clearInterval(gameInterval);
+  gameInterval = null;
+}
+
+function makePosition(top, left) {
+  return top + "_" + left;
+}
+
+drawSnake();
+let gameInterval = setInterval(() => {
   step();
-}, 500);
+}, 100);
