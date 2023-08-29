@@ -51,51 +51,81 @@ const moveRight = ([top, left]) => [top, left + 1];
 const moveLeft = ([top, left]) => [top, left - 1];
 const moveUp = ([top, left]) => [top - 1, left];
 const moveDown = ([top, left]) => [top + 1, left];
+
 let currentDirection = moveRight;
-let flushedDirection = currentDirection;
+
+let directionQueue = [];
+
 window.addEventListener("keydown", (e) => {
   switch (e.key) {
     case "ArrowLeft":
     case "A":
     case "a":
-      if (flushedDirection !== moveRight) {
-        currentDirection = moveLeft;
-      }
+      directionQueue.push(moveLeft);
       break;
     case "ArrowRight":
     case "D":
     case "d":
-      if (flushedDirection !== moveLeft) {
-        currentDirection = moveRight;
-      }
+      directionQueue.push(moveRight);
       break;
     case "ArrowUp":
     case "W":
     case "w":
-      if (flushedDirection !== moveDown) {
-        currentDirection = moveUp;
-      }
+      directionQueue.push(moveUp);
       break;
     case "ArrowDown":
     case "S":
     case "s":
-      if (flushedDirection !== moveUp) {
-        currentDirection = moveDown;
-      }
+      directionQueue.push(moveDown);
       break;
   }
+
+  // dump(directionQueue);
 });
 
 function step() {
   currentSnake.shift();
   const head = currentSnake[currentSnake.length - 1];
+
+  let nextDirection = currentDirection;
+  while (directionQueue.length > 0) {
+    const candidateDirection = directionQueue.shift();
+    if (areOpposite(candidateDirection, currentDirection)) {
+      continue;
+    }
+    nextDirection = candidateDirection;
+    break;
+  }
+  currentDirection = nextDirection;
   const nextHead = currentDirection(head);
-  flushedDirection = currentDirection;
   currentSnake.push(nextHead);
   drawSnake(currentSnake);
+  // dump(directionQueue);
 }
+
+function areOpposite(dir1, dir2) {
+  if (dir1 === moveLeft && dir2 === moveRight) {
+    return true;
+  }
+  if (dir1 === moveRight && dir2 === moveLeft) {
+    return true;
+  }
+  if (dir1 === moveUp && dir2 === moveDown) {
+    return true;
+  }
+  if (dir1 === moveDown && dir2 === moveUp) {
+    return true;
+  }
+  return false;
+}
+
+// function dump(queue) {
+//   document.getElementById("debug").innerText = queue
+//     .map((fn) => fn.name)
+//     .join(", ");
+// }
 
 drawSnake(currentSnake);
 setInterval(() => {
   step();
-}, 100);
+}, 500);
