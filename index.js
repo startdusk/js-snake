@@ -23,23 +23,30 @@ function initalizeCanvas() {
   }
 }
 
-function toPositionSet(snake) {
+function toPositionKeys(snake) {
   const set = new Set();
   for (let [top, left] of snake) {
-    const position = makePosition(top, left);
-    set.add(position);
+    const key = toKey(top, left);
+    set.add(key);
   }
   return set;
 }
 
 function drawSnake() {
+  const foodKey = toKey(currentFood[0], currentFood[1]);
   for (let i = 0; i < ROWS; i++) {
     for (let j = 0; j < COLS; j++) {
-      const position = i + "_" + j;
-      const pixel = pixels.get(position);
-      pixel.style.background = currentSnakePositions.has(position)
-        ? "black"
-        : "white";
+      const key = toKey(i, j);
+      const pixel = pixels.get(key);
+
+      let background = "white";
+      if (key === foodKey) {
+        background = "purple";
+      } else if (currentSnakeKeys.has(key)) {
+        background = "black";
+      }
+
+      pixel.style.background = background;
     }
   }
 }
@@ -56,7 +63,8 @@ let currentSnake = [
   [0, 7],
   [0, 8],
 ];
-let currentSnakePositions = toPositionSet(currentSnake);
+let currentSnakeKeys = toPositionKeys(currentSnake);
+let currentFood = [15, 10];
 
 const moveRight = ([top, left]) => [top, left + 1];
 const moveLeft = ([top, left]) => [top, left - 1];
@@ -109,12 +117,12 @@ function step() {
   }
   currentDirection = nextDirection;
   const nextHead = currentDirection(head);
-  if (!checkValidHead(currentSnakePositions, nextHead)) {
+  if (!checkValidHead(currentSnakeKeys, nextHead)) {
     stopGame();
     return;
   }
   currentSnake.push(nextHead);
-  currentSnakePositions = toPositionSet(currentSnake);
+  currentSnakeKeys = toPositionKeys(currentSnake);
   drawSnake();
   // dump(directionQueue);
 }
@@ -141,15 +149,15 @@ function areOpposite(dir1, dir2) {
 //     .join(", ");
 // }
 
-function checkValidHead(positions, [top, left]) {
+function checkValidHead(keys, [top, left]) {
   if (top < 0 || left < 0) {
     return false;
   }
   if (top >= ROWS || left >= COLS) {
     return false;
   }
-  const position = makePosition(top, left);
-  if (positions.has(position)) {
+  const key = toKey(top, left);
+  if (keys.has(key)) {
     return false;
   }
   return true;
@@ -161,7 +169,7 @@ function stopGame() {
   gameInterval = null;
 }
 
-function makePosition(top, left) {
+function toKey(top, left) {
   return top + "_" + left;
 }
 
