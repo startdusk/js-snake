@@ -4,7 +4,20 @@ const ROWS = 30;
 const COLS = 50;
 const PIXEL = 10;
 
+let gameInterval = null;
 const pixels = new Map();
+
+const moveRight = ([top, left]) => [top, left + 1];
+const moveLeft = ([top, left]) => [top, left - 1];
+const moveUp = ([top, left]) => [top - 1, left];
+const moveDown = ([top, left]) => [top + 1, left];
+
+let currentSnake;
+let currentSnakeKeys;
+let currentFoodKey;
+let currentDirection;
+let directionQueue;
+let currentVacantKeys;
 
 function initalizeCanvas() {
   for (let i = 0; i < ROWS; i++) {
@@ -57,19 +70,11 @@ function drawSnake() {
   }
 }
 
-const moveRight = ([top, left]) => [top, left + 1];
-const moveLeft = ([top, left]) => [top, left - 1];
-const moveUp = ([top, left]) => [top - 1, left];
-const moveDown = ([top, left]) => [top + 1, left];
-
-let currentSnake;
-let currentSnakeKeys;
-let currentFoodKey;
-let currentDirection;
-let directionQueue;
-let currentVacantKeys;
-
 window.addEventListener("keydown", (e) => {
+  if (e.shiftKey || e.ctrlKey || e.altKey || e.metaKey) {
+    return;
+  }
+  e.preventDefault();
   switch (e.key) {
     case "ArrowLeft":
     case "A":
@@ -96,6 +101,9 @@ window.addEventListener("keydown", (e) => {
       stopGame(false);
       startGame();
       break;
+    case " ":
+      step();
+      break;
   }
 
   // dump(directionQueue);
@@ -119,6 +127,7 @@ function step() {
     return;
   }
   currentSnake.push(nextHead);
+  updateKeySets();
   if (toKey(nextHead) == currentFoodKey) {
     const nextFoodKey = spawnFood();
     if (nextFoodKey === null) {
@@ -170,8 +179,6 @@ function checkValidHead(keys, cell) {
   }
   return true;
 }
-
-let gameInterval = null;
 
 function stopGame(success) {
   canvas.style.borderColor = success ? "green" : "red";
