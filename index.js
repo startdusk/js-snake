@@ -68,8 +68,11 @@ function step() {
   } else {
     popTail();
   }
-  drawSnake();
+  drawCanvas();
   // dump(directionQueue);
+  if (window.location.search === "?debug") {
+    checkIntegerity_SLOW();
+  }
 }
 
 function pushHead(nextHead) {
@@ -86,7 +89,7 @@ function popTail() {
   currentSnakeKeys.delete(key);
 }
 
-function drawSnake() {
+function drawCanvas() {
   const foodKey = currentFoodKey;
   for (let i = 0; i < ROWS; i++) {
     for (let j = 0; j < COLS; j++) {
@@ -118,22 +121,15 @@ function startGame() {
   currentSnake = makeInitialSnake();
   currentSnakeKeys = new Set();
   currentVacantKeys = new Set();
-  for (let i = 0; i < ROWS; i++) {
-    for (let j = 0; j < COLS; j++) {
-      currentVacantKeys.add(toKey([i, j]));
-    }
-  }
-  for (let cell of currentSnake) {
-    const key = toKey(cell);
-    currentVacantKeys.delete(key);
-    currentSnakeKeys.add(key);
-  }
+  const [snakeKeys, vacantKeys] = partitionCell(currentSnake);
+  currentSnakeKeys = snakeKeys;
+  currentVacantKeys = vacantKeys;
   currentDirection = moveRight;
   currentFoodKey = spawnFood();
 
   canvas.style.borderColor = "";
   gameInterval = setInterval(step, 100);
-  drawSnake();
+  drawCanvas();
 }
 
 window.addEventListener("keydown", (e) => {
@@ -196,7 +192,6 @@ initalizeCanvas();
 startGame();
 
 // --- utilities ---
-
 function areOpposite(dir1, dir2) {
   if (dir1 === moveLeft && dir2 === moveRight) {
     return true;
@@ -234,6 +229,22 @@ function checkValidHead(keys, cell) {
   return true;
 }
 
+function partitionCell(snake) {
+  const snakeKeys = new Set();
+  const vacantKeys = new Set();
+  for (let i = 0; i < ROWS; i++) {
+    for (let j = 0; j < COLS; j++) {
+      vacantKeys.add(toKey([i, j]));
+    }
+  }
+  for (let cell of snake) {
+    const key = toKey(cell);
+    vacantKeys.delete(key);
+    snakeKeys.add(key);
+  }
+  return [snakeKeys, vacantKeys];
+}
+
 function toKey([top, left]) {
   return top + "_" + left;
 }
@@ -246,4 +257,67 @@ function makeInitialSnake() {
     [0, 3],
     [0, 4],
   ];
+}
+
+// --- debugging ---
+
+function checkIntegerity_SLOW() {
+  let failedCheck = null;
+  let foodCount = 0;
+  const allKeys = new Set();
+  for (let i = 0; i < ROWS; i++) {
+    for (let j = 0; j < COLS; j++) {
+      const key = toKey([i, j]);
+      allKeys.add(key);
+      if (key === currentFoodKey) {
+        foodCount++;
+      }
+    }
+  }
+  if (foodCount !== 1) {
+    failedCheck = "there cannot be two foods";
+  }
+  const [snakeKeys, vacantKeys] = partitionCell(currentSnake);
+  if (!areSameSets_SLOW(snakeKeys, currentSnakeKeys)) {
+    failedCheck = "snake keys don't match";
+  }
+  if (!areSameSets_SLOW(vacantKeys, currentVacantKeys)) {
+    failedCheck = "vacant keys don't match";
+  }
+  if (currentSnakeKeys.has(currentFoodKey)) {
+    failedCheck = "there's food in the snake";
+  }
+  if (currentSnake.length !== currentSnakeKeys.size) {
+    failedCheck = "the snake intersects itself";
+  }
+  if (
+    !areSameSets_SLOW(
+      new Set([...currentSnakeKeys, ...currentVacantKeys]),
+      allKeys
+    )
+  ) {
+    failedCheck = "something is out of bounds";
+  }
+
+  for (let i = 1 /* intentional */; i < currentSnake.length; i++) {
+    const prevCell = currentSnake[i - 1];
+    const currCell = currentSnake[i];
+    const dy = currCell[0] - prevCell[0];
+    const dx = currCell[1] - prevCell[1];
+    const isOk =
+      (dy === 0 && Math.abs(dx) === 1) || (dx === 0 && Math.abs(dy) === 1);
+    if (!isOk) {
+      failedCheck = "the snake has a break";
+    }
+  }
+
+  if (failedCheck !== null) {
+    stopGame(false);
+    canvas.style.borderColor = "purple";
+    throw Error(failedCheck);
+  }
+}
+
+function areSameSets_SLOW(a, b) {
+  return JSON.stringify([...a].sort()) === JSON.stringify([...b].sort());
 }
